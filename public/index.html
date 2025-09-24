@@ -20,15 +20,15 @@
 
   <script>
     async function tocarTimbre() {
-  try {
-    const res = await fetch("https://timbre-virtual.vercel.app/api/tocar", { method: "POST" });
-    if (!res.ok) throw new Error("API devolvió " + res.status);
+      try {
+        const res = await fetch("/api/tocar", { method: "POST" });
+        if (!res.ok) throw new Error("API devolvió " + res.status);
 
-    window.location.href = "https://meet.jit.si/TimbreDeptoAlejo#config.prejoinPageEnabled=false";
-  } catch (error) {
-    alert("Error al tocar el timbre: " + error.message);
-  }
-}
+        window.location.href = "https://meet.jit.si/TimbreDeptoAlejo#config.prejoinPageEnabled=false";
+      } catch (error) {
+        alert("Error al tocar el timbre: " + error.message);
+      }
+    }
   </script>
 </body>
 </html>
