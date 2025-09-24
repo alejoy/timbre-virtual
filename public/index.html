@@ -1,31 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Timbre Virtual</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
-    #contenedor { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-    h1 { font-size: 2em; margin-bottom: 20px; }
-    p { font-size: 1.2em; margin-bottom: 30px; }
-    button {
-      font-size: 1.5em;
-      padding: 15px 40px;
-      background-color: #0078D7;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    button:hover { background-color: #005bb5; }
-  </style>
+<meta charset="UTF-8">
+<title>Timbre Virtual Chat</title>
+<style>
+body { font-family: Arial; margin: 0; padding: 0; }
+#contenedor { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+#chat { border: 1px solid #ccc; width: 300px; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+textarea { width: 300px; height: 50px; }
+button { padding: 10px 20px; background: #0078D7; color: white; border: none; border-radius: 5px; cursor: pointer; }
+button:hover { background: #005bb5; }
+</style>
 </head>
 <body>
-  <div id="contenedor">
-    <h1>🚪 Timbre Virtual</h1>
-    <p>Presioná el botón para anunciarte.</p>
-    <button onclick="window.location.href='/api/tocar'">Tocar timbre</button>
-  </div>
+<div id="contenedor">
+  <h1>🚪 Timbre Virtual</h1>
+  <div id="chat"></div>
+  <textarea id="mensajeVisitante" placeholder="Escribe algo..."></textarea><br>
+  <button onclick="tocarTimbre()">Tocar Timbre</button>
+</div>
+
+<script>
+async function tocarTimbre() {
+  const mensaje = document.getElementById("mensajeVisitante").value;
+  const res = await fetch("/api/tocar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mensajeVisitante: mensaje })
+  });
+  const data = await res.json();
+  if (!data.success) alert(data.mensaje);
+  document.getElementById("mensajeVisitante").value = "";
+}
+
+async function actualizarChat() {
+  const res = await fetch("/api/tocar");
+  const data = await res.json();
+  const chat = document.getElementById("chat");
+  chat.innerHTML = "";
+  data.mensajes.forEach(msg => {
+    chat.innerHTML += `<div><b>${msg.de}:</b> ${msg.texto}</div>`;
+  });
+}
+setInterval(actualizarChat, 2000);
+</script>
 </body>
 </html>
