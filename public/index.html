@@ -20,18 +20,18 @@
 
   <script>
     async function tocarTimbre() {
-      try {
-        // Llamada al endpoint que te manda Telegram
-        await fetch("/api/tocar");
+  try {
+    const res = await fetch("/api/tocar", { method: "GET" });
+    if (!res.ok) throw new Error("API error");
 
-        // Reemplazar la pantalla inicial por el iframe de Jitsi
-        document.body.innerHTML = `
-          <iframe src="https://meet.jit.si/TimbreDeptoAlejo#config.prejoinPageEnabled=false" allow="camera; microphone; fullscreen; display-capture"></iframe>
-        `;
-      } catch (error) {
-        alert("Error al tocar el timbre");
-      }
-    }
+    document.body.innerHTML = `
+      <iframe src="https://meet.jit.si/TimbreDeptoAlejo#config.prejoinPageEnabled=false"
+              allow="camera; microphone; fullscreen; display-capture"></iframe>
+    `;
+  } catch (error) {
+    alert("Error al tocar el timbre: " + error.message);
+  }
+}
   </script>
 </body>
 </html>
