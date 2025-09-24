@@ -1,10 +1,5 @@
 import fetch from "node-fetch";
-
-// Almacenamiento simple en memoria (para pruebas)
-let estadoTimbre = {
-  tocado: false,
-  mensajes: []
-};
+import { estadoTimbre } from "./estadoTimbre";
 
 export default async function handler(req, res) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -22,7 +17,6 @@ export default async function handler(req, res) {
     const mensajeTelegram = `🔔 Alguien tocó el timbre 🚪\n\nMensaje visitante: ${mensajeVisitante || "Hola"}\n👉 Uníte: ${enlace}`;
 
     try {
-      // Enviar mensaje a Telegram
       await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
