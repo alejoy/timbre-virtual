@@ -15,8 +15,26 @@
     <h1>🚪 Timbre Virtual</h1>
     <button onclick="tocarTimbre()">Tocar Timbre</button>
   </div>
+  <div id="respuesta" style="margin-top:20px; font-size:18px; color:green;">
+  Esperando respuesta del propietario...
+</div>
+<script>
+  async function chequearMensajes() {
+    try {
+      const res = await fetch("/api/webhook"); // usamos GET
+      const data = await res.json();
+      if (data.mensaje) {
+        document.getElementById("respuesta").innerText = "📩 Respuesta: " + data.mensaje;
+      }
+    } catch (error) {
+      console.error("Error al chequear mensajes", error);
+    }
+  }
 
-  <script>
+  // revisar cada 3 segundos
+  setInterval(chequearMensajes, 3000);
+</script>
+<script>
     async function tocarTimbre() {
       try {
         const res = await fetch("/api/tocar", { method: "POST" });
