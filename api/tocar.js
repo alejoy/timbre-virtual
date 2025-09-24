@@ -9,15 +9,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    const { mensajeVisitante } = req.body || {};
     estadoTimbre.tocado = true;
 
-    if (mensajeVisitante) {
-      estadoTimbre.mensajes.push({ de: "visitante", texto: mensajeVisitante });
-    }
-
     const enlace = "https://whereby.com/timbre-dpto";
-    const mensajeTelegram = `🔔 Alguien tocó el timbre 🚪\n\nMensaje visitante: ${mensajeVisitante || "Hola"}\n👉 Uníte: ${enlace}`;
+    const mensajeTelegram = `🔔 Timbre tocado 🚪\n👉 Abrir videollamada: ${enlace}`;
 
     try {
       const telegramRes = await fetch(
@@ -28,17 +23,15 @@ export default async function handler(req, res) {
           body: JSON.stringify({ chat_id: CHAT_ID, text: mensajeTelegram })
         }
       );
-      estadoTimbre.mensajes.push({ de: "sistema", texto: "Timbre tocado" });
 
-      return res.status(200).json({ success: true, mensaje: "Ya voy a abrir", link: enlace });
+      const telegramJson = await telegramRes.json();
+      console.log("Telegram respuesta:", telegramJson);
+
+      return res.status(200).json({ success: true, mensaje: "Timbre sonó", link: enlace });
     } catch (error) {
       console.error("Error enviando a Telegram:", error);
-      return res.status(500).json({ success: false, mensaje: "Error al tocar el timbre" });
+      return res.status(500).json({ success: false, mensaje: "Error al tocar timbre" });
     }
-  }
-
-  if (req.method === "GET") {
-    return res.status(200).json(estadoTimbre);
   }
 
   return res.status(405).json({ error: "Método no permitido" });
