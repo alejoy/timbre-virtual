@@ -9,8 +9,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-
-  if (req.method === "POST") {
+  if (req.method === "GET" || req.method === "POST") {
     const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
     const CHAT_ID = process.env.CHAT_ID;
 
