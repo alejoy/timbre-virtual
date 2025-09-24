@@ -1,28 +1,46 @@
 import fetch from "node-fetch";
 
+// Almacenamiento simple en memoria (para pruebas)
+let estadoTimbre = {
+  tocado: false,
+  mensajes: []
+};
+
 export default async function handler(req, res) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
   const CHAT_ID = process.env.CHAT_ID;
 
-  // Enlace directo a la sala de Whereby
-  const enlace = "https://whereby.com/timbre-dpto";
+  if (req.method === "POST") {
+    const { mensajeVisitante } = req.body || {};
+    estadoTimbre.tocado = true;
 
-  // Mensaje que se enviará a Telegram
-  const mensaje = `🔔 Alguien tocó el timbre 🚪\n\n👉 Uníte a la reunión: ${enlace}`;
+    if (mensajeVisitante) {
+      estadoTimbre.mensajes.push({ de: "visitante", texto: mensajeVisitante });
+    }
 
-  try {
-    // Enviar mensaje a Telegram
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: CHAT_ID, text: mensaje })
-    });
+    const enlace = "https://whereby.com/timbre-dpto";
+    const mensajeTelegram = `🔔 Alguien tocó el timbre 🚪\n\nMensaje visitante: ${mensajeVisitante || "Hola"}\n👉 Uníte: ${enlace}`;
 
-    // Redirigir al visitante a la sala de Whereby
-    res.writeHead(302, { Location: enlace });
-    res.end();
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al tocar el timbre");
+    try {
+      // Enviar mensaje a Telegram
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: CHAT_ID, text: mensajeTelegram })
+      });
+
+      estadoTimbre.mensajes.push({ de: "sistema", texto: "Timbre tocado" });
+
+      return res.status(200).json({ success: true, mensaje: "Ya voy a abrir", link: enlace });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, mensaje: "Error al tocar el timbre" });
+    }
   }
+
+  if (req.method === "GET") {
+    return res.status(200).json(estadoTimbre);
+  }
+
+  return res.status(405).json({ error: "Método no permitido" });
 }
