@@ -21,9 +21,10 @@
   <script>
     async function tocarTimbre() {
   try {
-    const res = await fetch("/api/tocar", { method: "GET" });
-    if (!res.ok) throw new Error("API error");
+    const res = await fetch("https://timbre-virtual.vercel.app/api/tocar", { method: "GET" });
+    if (!res.ok) throw new Error("API devolvió " + res.status);
 
+    // Si la API respondió OK, cargamos Jitsi
     document.body.innerHTML = `
       <iframe src="https://meet.jit.si/TimbreDeptoAlejo#config.prejoinPageEnabled=false"
               allow="camera; microphone; fullscreen; display-capture"></iframe>
@@ -32,6 +33,7 @@
     alert("Error al tocar el timbre: " + error.message);
   }
 }
+
   </script>
 </body>
 </html>
