@@ -1,27 +1,35 @@
-let lastMessage = null; // guardamos el último mensaje recibido
-
+// api/webhook.js
 export default async function handler(req, res) {
   if (req.method === "POST") {
-    try {
-      const body = req.body;
+    const body = req.body;
 
-      // Mensaje entrante desde Telegram
-      if (body.message && body.message.text) {
-        lastMessage = body.message.text; // guardamos
-        console.log("📩 Mensaje recibido de Telegram:", lastMessage);
-      }
+    // Ver que Telegram manda algo
+    console.log("Mensaje recibido de Telegram:", body);
 
-      return res.status(200).json({ ok: true });
-    } catch (error) {
-      console.error("❌ Error webhook:", error);
-      return res.status(500).json({ ok: false });
+    // Si es un mensaje normal de chat
+    if (body.message) {
+      const chatId = body.message.chat.id;
+      const text = body.message.text;
+
+      console.log(`Nuevo mensaje de ${chatId}: ${text}`);
+
+      // Opcional: responder con un eco para test
+      await fetch(
+        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `Eco: ${text}`,
+          }),
+        }
+      );
     }
+
+    // Telegram necesita un 200 rápido
+    return res.status(200).json({ ok: true });
   }
 
-  if (req.method === "GET") {
-    // frontend consulta el último mensaje
-    return res.status(200).json({ mensaje: lastMessage });
-  }
-
-  return res.status(405).json({ error: "Método no permitido" });
+  res.status(200).send("Webhook activo");
 }
