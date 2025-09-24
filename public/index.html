@@ -4,14 +4,34 @@
   <meta charset="UTF-8">
   <title>Timbre Virtual</title>
   <style>
-    body { font-family: Arial; text-align: center; margin-top: 100px; }
-    button { font-size: 22px; padding: 15px 40px; background: #0078D7; color: white; border: none; border-radius: 10px; cursor: pointer; }
+    body { font-family: Arial; text-align: center; margin: 0; padding: 0; }
+    #contenedor { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+    button { font-size: 22px; padding: 15px 40px; background: #0078D7; color: white; border: none; border-radius: 10px; cursor: pointer; margin-top: 20px; }
     button:hover { background: #005bb5; }
+    iframe { width: 100vw; height: 100vh; border: none; }
   </style>
 </head>
 <body>
-  <h1>🚪 Timbre Virtual</h1>
-  <p>Presioná el botón para anunciarte.</p>
-  <button onclick="window.location.href='/api/tocar'">Tocar timbre</button>
+  <div id="contenedor">
+    <h1>🚪 Timbre Virtual</h1>
+    <p>Presioná el botón para anunciarte.</p>
+    <button onclick="tocarTimbre()">Tocar timbre</button>
+  </div>
+
+  <script>
+    async function tocarTimbre() {
+      try {
+        // Llamada al endpoint que te manda Telegram
+        await fetch("/api/tocar");
+
+        // Reemplazar la pantalla inicial por el iframe de Jitsi
+        document.body.innerHTML = `
+          <iframe src="https://meet.jit.si/TimbreDeptoAlejo#config.prejoinPageEnabled=false" allow="camera; microphone; fullscreen; display-capture"></iframe>
+        `;
+      } catch (error) {
+        alert("Error al tocar el timbre");
+      }
+    }
+  </script>
 </body>
 </html>
