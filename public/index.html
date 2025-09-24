@@ -18,12 +18,17 @@
 
   <script>
     async function tocarTimbre() {
-      const res = await fetch("/api/tocar", { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        alert("Timbre sonó 🎉");
-      } else {
-        alert("Error: " + data.mensaje);
+      try {
+        const res = await fetch("/api/tocar", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          alert("🔔 Timbre sonó");
+        } else {
+          alert("Error: " + data.mensaje);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Error tocando timbre");
       }
     }
   </script>
