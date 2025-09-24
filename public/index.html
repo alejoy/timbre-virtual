@@ -23,13 +23,11 @@ button:hover { background: #005bb5; }
 <script>
 async function tocarTimbre() {
   const mensaje = document.getElementById("mensajeVisitante").value;
-  const res = await fetch("/api/tocar", {
+  await fetch("/api/tocar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mensajeVisitante: mensaje })
   });
-  const data = await res.json();
-  if (!data.success) alert(data.mensaje);
   document.getElementById("mensajeVisitante").value = "";
 }
 
