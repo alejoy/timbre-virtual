@@ -1,6 +1,5 @@
 module.exports = {
   estadoTimbre: {
-    tocado: false,
-    mensajes: []
+    tocado: false
   }
 };
