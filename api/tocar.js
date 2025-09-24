@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 import { estadoTimbre } from "./estadoTimbre";
 
 export default async function handler(req, res) {
