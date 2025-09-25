@@ -19,21 +19,16 @@
   Esperando respuesta del propietario...
 </div>
 <script>
-  async function chequearMensajes() {
-    try {
-      const res = await fetch("/api/webhook"); // usamos GET
-      const data = await res.json();
-      if (data.mensaje) {
-        document.getElementById("respuesta").innerText = "📩 Respuesta: " + data.mensaje;
-      }
-    } catch (error) {
-      console.error("Error al chequear mensajes", error);
-    }
-  }
+async function checkMessages() {
+  const res = await fetch("/api/webhook");
+  const data = await res.json();
+  console.log("Mensajes recibidos:", data.messages);
+  // Aquí podés actualizar tu UI
+}
 
-  // revisar cada 3 segundos
-  setInterval(chequearMensajes, 3000);
+setInterval(checkMessages, 3000); // cada 3 segundos
 </script>
+
 <script>
     async function tocarTimbre() {
       try {
