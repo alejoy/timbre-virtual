@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin - Timbre Digital</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    body { font-family: system-ui, Arial; margin: 0; padding: 0; background: #f5f7fb; color: #0f172a; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(15,23,42,0.08); margin-bottom: 16px; }
+    input, button { padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; }
+    button { background: #2563eb; color: white; border: 0; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+    .muted { color: #64748b; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .qr { width: 160px; height: 160px; border: 1px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; color:#64748b; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>Identificación</h2>
+      <div class="row">
+        <label>Owner ID:</label>
+        <input id="ownerId" placeholder="owner-123" />
+        <button onclick="saveOwner()">Guardar</button>
+        <span class="muted">Solo MVP: usa un ID manual</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Notificaciones Push (FCM)</h2>
+      <div class="row">
+        <input id="token" placeholder="FCM token" style="flex:1" />
+        <button onclick="obtenerToken()">Obtener token</button>
+        <button onclick="registerToken()">Registrar</button>
+      </div>
+      <div class="muted">Permite notificaciones, obtené el token y se registrará para este Owner.</div>
+    </div>
+
+    <div class="card">
+      <h2>Crear Timbre</h2>
+      <div class="row">
+        <input id="name" placeholder="Nombre casa (opcional)" />
+        <input id="lat" placeholder="Lat" />
+        <input id="lng" placeholder="Lng" />
+        <button onclick="createDoorbell()">Crear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Mis Timbres</h2>
+      <div id="doorbells"></div>
+    </div>
+
+    <div class="card">
+      <h2>Historial</h2>
+      <div id="history" class="muted">Selecciona un timbre para ver sus rings.</div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+  <script>
+    function getOwnerId() { return localStorage.getItem('ownerId') || ''; }
+    function setOwnerId(v) { localStorage.setItem('ownerId', v); }
+
+    document.getElementById('ownerId').value = getOwnerId();
+
+    function saveOwner() {
+      const v = document.getElementById('ownerId').value.trim();
+      if (!v) return alert('Ingresa Owner ID');
+      setOwnerId(v); alert('Guardado');
+    }
+
+    async function registerToken() {
+      const ownerId = getOwnerId(); if (!ownerId) return alert('Configura Owner ID');
+      const token = document.getElementById('token').value.trim();
+      if (!token) return alert('Pega tu token FCM');
+      const r = await fetch('/api/registerToken', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ownerId, token }) });
+      const j = await r.json(); if (!r.ok) return alert(j.error||'Error'); alert('Token registrado');
+    }
+
+    async function obtenerToken() {
+      try {
+        const ownerId = getOwnerId(); if (!ownerId) return alert('Configura Owner ID');
+        const cfgRes = await fetch('/api/publicConfig');
+        const cfg = await cfgRes.json();
+        if (!cfg.firebase || !cfg.vapidKey) return alert('Faltan credenciales públicas de Firebase');
+        if (!('serviceWorker' in navigator)) return alert('SW no soportado');
+        const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        if (Notification.permission !== 'granted') {
+          const p = await Notification.requestPermission();
+          if (p !== 'granted') return alert('Permite notificaciones para continuar');
+        }
+        firebase.initializeApp(cfg.firebase);
+        const messaging = firebase.messaging();
+        const token = await messaging.getToken({ vapidKey: cfg.vapidKey });
+        if (!token) return alert('No se pudo obtener token');
+        document.getElementById('token').value = token;
+        await registerToken();
+      } catch (e) {
+        console.error(e); alert('Error obteniendo token');
+      }
+    }
+
+    async function createDoorbell() {
+      const ownerId = getOwnerId(); if (!ownerId) return alert('Configura Owner ID');
+      const name = document.getElementById('name').value;
+      const lat = parseFloat(document.getElementById('lat').value);
+      const lng = parseFloat(document.getElementById('lng').value);
+      if (Number.isNaN(lat) || Number.isNaN(lng)) return alert('Lat/Lng inválidos');
+      const r = await fetch('/api/doorbells/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ownerId, name, location: { lat, lng } }) });
+      const j = await r.json(); if (!r.ok) return alert(j.error||'Error');
+      await loadDoorbells(); alert('Creado: '+ j.doorbellId);
+    }
+
+    async function loadDoorbells() {
+      const ownerId = getOwnerId(); if (!ownerId) return;
+      const r = await fetch(`/api/doorbells/list?ownerId=${encodeURIComponent(ownerId)}`);
+      if (!r.ok) return;
+      const j = await r.json();
+      const el = document.getElementById('doorbells');
+      el.innerHTML = '';
+      j.doorbells.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <strong>${d.name || d.doorbellId}</strong>
+          <span class="muted">${d.isActive ? 'Activo' : 'Inactivo'}</span>
+          <button data-id="${d.doorbellId}" data-active="${d.isActive}">${d.isActive ? 'Desactivar' : 'Activar'}</button>
+          <div class="qr"><a href="${d.qrCodeUrl}" target="_blank">${d.qrCodeUrl}</a></div>
+          <button data-hist="${d.doorbellId}">Ver historial</button>
+        `;
+        row.querySelector('button[data-id]').onclick = async (ev) => {
+          const id = ev.target.getAttribute('data-id');
+          const active = ev.target.getAttribute('data-active') === 'true';
+          await fetch('/api/doorbells/toggleActive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doorbellId: id, ownerId: getOwnerId(), isActive: !active }) });
+          await loadDoorbells();
+        };
+        row.querySelector('button[data-hist]').onclick = async (ev) => {
+          await loadHistory(ev.target.getAttribute('data-hist'));
+        };
+        el.appendChild(row);
+      });
+    }
+
+    async function loadHistory(doorbellId) {
+      const ownerId = getOwnerId(); if (!ownerId) return;
+      const r = await fetch(`/api/rings/list?doorbellId=${encodeURIComponent(doorbellId)}&ownerId=${encodeURIComponent(ownerId)}&limit=25`);
+      const j = await r.json(); if (!r.ok) return alert(j.error||'Error');
+      const el = document.getElementById('history');
+      el.innerHTML = '';
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Fecha</th><th>Estado</th><th>Respuesta</th><th>Acción</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      j.rings.forEach(r => {
+        const tr = document.createElement('tr');
+        const actionCell = document.createElement('td');
+        if (r.status === 'PENDING') {
+          const wrap = document.createElement('div');
+          wrap.className = 'row';
+          const presets = ['Ya voy.', 'No estoy en casa ahora.', 'Déjalo en la puerta.'];
+          presets.forEach(text => {
+            const b = document.createElement('button'); b.textContent = text; b.onclick = () => sendResponse(r.id, text, doorbellId); wrap.appendChild(b);
+          });
+          const input = document.createElement('input'); input.placeholder = 'Personalizado (<=50)';
+          const send = document.createElement('button'); send.textContent = 'Enviar'; send.onclick = () => sendResponse(r.id, input.value, doorbellId);
+          wrap.appendChild(input); wrap.appendChild(send);
+          actionCell.appendChild(wrap);
+        } else {
+          actionCell.textContent = '-';
+        }
+        tr.innerHTML = `<td>${r.timestamp||'-'}</td><td>${r.status}</td><td>${r.response||''}</td>`;
+        tr.appendChild(actionCell);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      el.appendChild(table);
+    }
+
+    async function sendResponse(ringId, response, doorbellId) {
+      if (!response || response.length > 50) return alert('Respuesta inválida');
+      const r = await fetch('/api/respond', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ringId, response }) });
+      const j = await r.json(); if (!r.ok) return alert(j.error||'Error');
+      await loadHistory(doorbellId);
+    }
+
+    loadDoorbells();
+  </script>
+</body>
+</html>
