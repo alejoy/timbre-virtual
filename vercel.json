@@ -6,7 +6,19 @@
   ],
   "routes": [
     { "src": "/", "dest": "/public/index.html" },
+    { "src": "/admin", "dest": "/public/admin.html" },
     { "src": "/api/tocar", "dest": "/api/tocar.js" },
-    { "src": "/api/webhook", "dest": "/api/webhook.js" }
+    { "src": "/api/webhook", "dest": "/api/webhook.js" },
+    { "src": "/ring/[^/]+", "dest": "/public/ring.html" },
+    { "src": "/api/ring", "dest": "/api/ring.js" },
+    { "src": "/api/respond", "dest": "/api/respond.js" },
+    { "src": "/api/registerToken", "dest": "/api/registerToken.js" },
+    { "src": "/api/doorbells/create", "dest": "/api/doorbells/create.js" },
+    { "src": "/api/doorbells/list", "dest": "/api/doorbells/list.js" },
+    { "src": "/api/doorbells/toggleActive", "dest": "/api/doorbells/toggleActive.js" },
+    { "src": "/api/doorbell", "dest": "/api/doorbell.js" },
+    { "src": "/api/ringStatus", "dest": "/api/ringStatus.js" },
+    { "src": "/api/rings/list", "dest": "/api/rings/list.js" },
+    { "src": "/api/publicConfig", "dest": "/api/publicConfig.js" }
   ]
 }

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tocar Timbre</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    body { font-family: system-ui, Arial; margin: 0; padding: 0; background: #f5f7fb; color: #0f172a; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 24px; }
+    .card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(15,23,42,0.08); }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    .muted { color: #64748b; margin-bottom: 16px; }
+    button { width: 100%; padding: 16px; font-size: 18px; border: 0; border-radius: 12px; background: #2563eb; color: white; cursor: pointer; }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+    .msg { margin-top: 16px; padding: 12px; border-radius: 12px; background: #ecfdf5; color: #065f46; display: none; }
+    .warn { background: #fef2f2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 id="title">Timbre</h1>
+      <div class="muted" id="subtitle">Preparando…</div>
+      <button id="btn" disabled>Solicitar geolocalización…</button>
+      <div class="msg warn" id="warn"></div>
+      <div class="msg" id="resp"></div>
+    </div>
+  </div>
+  <script>
+    const q = new URLSearchParams(location.search);
+    const pathParts = location.pathname.split('/');
+    const doorbellId = pathParts[pathParts.length - 1];
+
+    const title = document.getElementById('title');
+    const subtitle = document.getElementById('subtitle');
+    const btn = document.getElementById('btn');
+    const warn = document.getElementById('warn');
+    const resp = document.getElementById('resp');
+
+    let coords = null;
+    let ringId = null;
+
+    const visitorSessionId = (() => {
+      const k = 'visitorSessionId';
+      const existing = localStorage.getItem(k);
+      if (existing) return existing;
+      const v = crypto.randomUUID();
+      localStorage.setItem(k, v);
+      return v;
+    })();
+
+    async function loadDoorbell() {
+      const res = await fetch(`/api/doorbell?doorbellId=${encodeURIComponent(doorbellId)}`);
+      if (!res.ok) {
+        subtitle.textContent = 'Timbre no disponible';
+        return;
+      }
+      const data = await res.json();
+      title.textContent = data.name ? `Casa ${data.name}` : 'Timbre';
+      subtitle.textContent = data.isActive ? 'Listo para tocar' : 'Desactivado';
+      if (!data.isActive) return;
+      btn.disabled = false;
+      btn.textContent = 'Tocar timbre';
+    }
+
+    function requestGeo() {
+      warn.style.display = 'none';
+      if (!('geolocation' in navigator)) {
+        showWarn('Geolocalización no soportada por este navegador.');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Obteniendo ubicación…';
+      navigator.geolocation.getCurrentPosition((pos) => {
+        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        btn.disabled = false;
+        btn.textContent = 'Tocar timbre';
+      }, (err) => {
+        showWarn('No se pudo obtener tu ubicación. Activa permisos de ubicación.');
+        btn.disabled = true;
+        btn.textContent = 'Permite ubicación para tocar';
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    }
+
+    async function ring() {
+      if (!coords) return showWarn('Debes permitir geolocalización para tocar.');
+      btn.disabled = true;
+      btn.textContent = 'Tocando…';
+      warn.style.display = 'none';
+      resp.style.display = 'none';
+      try {
+        const r = await fetch('/api/ring', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doorbellId, visitorSessionId, ringLocation: coords })
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Error');
+        ringId = j.ringId;
+        resp.style.display = 'block';
+        resp.textContent = 'Timbre tocado. Espera la respuesta.';
+        pollResponse();
+      } catch (e) {
+        showWarn(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Tocar de nuevo';
+      }
+    }
+
+    async function pollResponse() {
+      if (!ringId) return;
+      const r = await fetch(`/api/ringStatus?ringId=${encodeURIComponent(ringId)}`);
+      if (r.ok) {
+        const j = await r.json();
+        if (j.status === 'REPLIED' && j.response) {
+          resp.style.display = 'block';
+          resp.textContent = `Respuesta: ${j.response}`;
+          return;
+        }
+      }
+      setTimeout(pollResponse, 2500);
+    }
+
+    function showWarn(m) {
+      warn.style.display = 'block';
+      warn.textContent = m;
+    }
+
+    btn.addEventListener('click', () => {
+      if (!coords) requestGeo(); else ring();
+    });
+
+    loadDoorbell();
+  </script>
+</body>
+</html>
